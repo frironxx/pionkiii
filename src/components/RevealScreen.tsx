@@ -1,5 +1,5 @@
 import React from 'react';
-import { RoundResult, Player } from '../types';
+import { RoundResult, Player, isCustomAvatar } from '../types';
 import { AVATAR_PRESETS } from './AvatarPicker';
 import { Check, X, ShieldAlert, Flame, Sparkles, Crown } from 'lucide-react';
 
@@ -22,7 +22,7 @@ export const RevealScreen: React.FC<RevealScreenProps> = ({
 
   const owner = result ? getPlayer(result.actualOwnerUserId) : null;
   const ownerPreset = owner ? AVATAR_PRESETS.find((p) => p.id === owner.avatarId) : null;
-  const isOwnerCustom = owner?.avatarId.startsWith('data:image') || owner?.avatarId.startsWith('/api/avatar');
+  const isOwnerCustom = isCustomAvatar(owner?.avatarId);
 
   const myPoints = result?.pointsGained[myUserId] || 0;
   const isMeOwner = result?.actualOwnerUserId === myUserId;

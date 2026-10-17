@@ -6,6 +6,16 @@ export interface UserProfile {
   avatarBg: string;
 }
 
+export const isCustomAvatar = (avatarId?: string): boolean => {
+  if (!avatarId) return false;
+  return (
+    avatarId.startsWith('/api/avatar') ||
+    avatarId.startsWith('data:image') ||
+    avatarId.startsWith('http://') ||
+    avatarId.startsWith('https://')
+  );
+};
+
 export interface UserStats {
   gamesPlayed: number;
   gamesWon: number;

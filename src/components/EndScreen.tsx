@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import confetti from 'canvas-confetti';
-import { LeaderboardEntry } from '../types';
+import { LeaderboardEntry, isCustomAvatar } from '../types';
 import { AVATAR_PRESETS } from './AvatarPicker';
 import { Trophy, Crown, RotateCcw, Home, Sparkles, ShieldCheck } from 'lucide-react';
 
@@ -81,7 +81,7 @@ export const EndScreen: React.FC<EndScreenProps> = ({
               className="w-16 h-16 rounded-2xl flex items-center justify-center text-4xl shadow-xl border-2 border-amber-400 overflow-hidden flex-shrink-0"
               style={{ backgroundColor: winner?.avatarBg || '#f59e0b' }}
             >
-              {winner?.avatarId.startsWith('data:image') ? (
+              {isCustomAvatar(winner?.avatarId) ? (
                 <img
                   src={winner?.avatarId}
                   alt={winner?.displayName}

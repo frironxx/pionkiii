@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { UserProfile, UserStats } from '../types';
+import { UserProfile, UserStats, isCustomAvatar } from '../types';
 import { AvatarPicker, AVATAR_PRESETS } from './AvatarPicker';
 import { Play, Trophy, HelpCircle, User, Flame, Award, Zap, Camera, Upload } from 'lucide-react';
 
@@ -76,7 +76,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   };
 
   const activePreset = AVATAR_PRESETS.find((p) => p.id === profile.avatarId);
-  const isCustomImg = profile.avatarId.startsWith('data:image');
+  const isCustomImg = isCustomAvatar(profile.avatarId);
 
   return (
     <div className="h-[100dvh] max-h-[100dvh] bg-slate-950 flex flex-col justify-between p-3 sm:p-6 text-slate-100 max-w-lg mx-auto overflow-hidden select-none">

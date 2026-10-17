@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Player } from '../types';
+import { Player, isCustomAvatar } from '../types';
 import { AvatarPicker, AVATAR_PRESETS } from './AvatarPicker';
 import { Check, Users, Clock, LogOut, Camera } from 'lucide-react';
 
@@ -87,7 +87,7 @@ export const Lobby: React.FC<LobbyProps> = ({
             const player = players[slotIndex];
             const isMe = player?.userId === myUserId;
             const preset = player ? AVATAR_PRESETS.find((p) => p.id === player.avatarId) : null;
-            const isCustom = player?.avatarId.startsWith('data:image');
+            const isCustom = isCustomAvatar(player?.avatarId);
 
             if (!player) {
               return (

@@ -1,5 +1,5 @@
 import React from 'react';
-import { LeaderboardEntry } from '../types';
+import { LeaderboardEntry, isCustomAvatar } from '../types';
 import { AVATAR_PRESETS } from './AvatarPicker';
 import { Trophy, Flame, Clock } from 'lucide-react';
 
@@ -41,7 +41,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
           {standings.map((player, index) => {
             const isMe = player.userId === myUserId;
             const preset = AVATAR_PRESETS.find((p) => p.id === player.avatarId);
-            const isCustom = player.avatarId.startsWith('data:image');
+            const isCustom = isCustomAvatar(player.avatarId);
 
             return (
               <div

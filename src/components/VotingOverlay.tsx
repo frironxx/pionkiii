@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { isCustomAvatar } from '../types';
 import { AVATAR_PRESETS } from './AvatarPicker';
 import { Check } from 'lucide-react';
 
@@ -91,7 +92,7 @@ export const VotingOverlay: React.FC<VotingOverlayProps> = ({
         {voteableCandidates.map((candidate) => {
           const isSelected = selectedVoteId === candidate.userId;
           const preset = AVATAR_PRESETS.find((p) => p.id === candidate.avatarId);
-          const isCustom = candidate.avatarId.startsWith('data:image') || candidate.avatarId.startsWith('/api/avatar');
+          const isCustom = isCustomAvatar(candidate.avatarId);
 
           return (
             <button
