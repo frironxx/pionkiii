@@ -277,23 +277,34 @@ export class GameManager {
       });
     }
 
-    // 2. Jeśli którykolwiek gracz ma 0 filmów (np. nie odblokował jeszcze konta na TikToku):
-    // Zapewniamy, że KAŻDY gracz w pokoju ma filmy do gry, dzieląc dostępną pulę!
-    // Żaden mecz nie może być w 100% zdominowany przez jednego gracza!
+    // 2. Jeśli brakuje filmów lub którykolwiek gracz ma 0 filmów:
+    // Zapewniamy, że KAŻDY gracz w pokoju ma własną, zbalansowaną pulę rund!
+    if (allAvailableVideos.length === 0) {
+      const cachedDb = db.getCachedLikedVideos('friron411k') || [];
+      allAvailableVideos.push(...cachedDb);
+    }
+
     const playersWithZero = Array.from(playersMap.values()).filter((p) => p.videos.length === 0);
-    const playersWithVids = Array.from(playersMap.values()).filter((p) => p.videos.length > 0);
-
-    if (playersWithZero.length > 0 && playersWithVids.length > 0 && allAvailableVideos.length > 0) {
-      console.log(`[GameManager] ${playersWithZero.length} graczy ma 0 filmów z TikToka. Dzielę pulę, aby każdy miał swoje rundy.`);
+    if (playersWithZero.length > 0 && allAvailableVideos.length > 0) {
+      console.log(`[GameManager] Zapewniam zbalansowany podział talii dla wszystkich ${room.players.size} graczy.`);
       const pool = [...allAvailableVideos];
-      const sliceSize = Math.max(5, Math.floor(pool.length / room.players.size));
+      const perPlayerCount = Math.max(5, Math.floor(pool.length / room.players.size));
 
-      let offset = sliceSize;
-      playersWithZero.forEach((zeroPlayer) => {
-        const assignedSlice = pool.slice(offset, offset + sliceSize);
-        zeroPlayer.videos = assignedSlice.length > 0 ? assignedSlice : pool;
-        offset = (offset + sliceSize) % pool.length;
-      });
+      let idx = 0;
+      for (const p of room.players.values()) {
+        const start = idx * perPlayerCount;
+        const end = start + perPlayerCount;
+        const playerSlice = pool.slice(start, end);
+        const finalVids = playerSlice.length >= 3 ? playerSlice : pool;
+
+        playersMap.set(p.userId, {
+          userId: p.userId,
+          username: p.tiktokUsername,
+          displayName: p.displayName,
+          videos: finalVids,
+        });
+        idx++;
+      }
     }
 
     room.deck = TikTokService.buildMatchDeck(playersMap, room.totalRounds);

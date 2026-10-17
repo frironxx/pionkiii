@@ -190,17 +190,12 @@ export const Lobby: React.FC<LobbyProps> = ({
                   </div>
                 </div>
 
-                {/* Status filmów z TikToka */}
+                {/* Status profilu */}
                 <div className="mt-1.5 pt-1 border-t border-slate-800/80 flex items-center justify-between text-[9px]">
-                  {hasVids ? (
-                    <span className="font-bold text-emerald-400 truncate">
-                      🎥 {vCount} filmów ✅
-                    </span>
-                  ) : (
-                    <span className="font-bold text-amber-400 truncate" title="Konto prywatne na TikToku">
-                      ⚠️ 0 filmów (Prywatne)
-                    </span>
-                  )}
+                  <span className="font-bold text-emerald-400 truncate flex items-center gap-1">
+                    <span>🎥</span>
+                    <span>Profil połączony ✅</span>
+                  </span>
 
                   {player.isReady ? (
                     <span className="inline-flex items-center gap-0.5 font-black text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded-full border border-emerald-500/20">
@@ -241,30 +236,6 @@ export const Lobby: React.FC<LobbyProps> = ({
             >
               Anuluj
             </button>
-          </div>
-        )}
-
-        {/* Instrukcja jeśli ktoś ma 0 filmów z TikToka */}
-        {anyPlayerHasZero && (
-          <div className="w-full bg-amber-500/10 border border-amber-500/30 rounded-2xl p-2 text-left flex-shrink-0 space-y-1">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-[11px] font-black text-amber-300">
-                <span>⚠️</span>
-                <span>Jak odblokować filmy kolegi z TikToka:</span>
-              </div>
-              <button
-                onClick={handleRefreshClick}
-                disabled={isRefreshing}
-                className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-500/20 border border-amber-500/40 text-[10px] font-black text-amber-300 hover:bg-amber-500/30 active:scale-95 transition-all"
-              >
-                <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
-                <span>Odśwież</span>
-              </button>
-            </div>
-            <p className="text-[10px] text-amber-300/80 leading-tight">
-              W TikToku: <strong>Profil</strong> ➔ <strong>Menu</strong> ➔ <strong>Ustawienia i prywatność</strong> ➔ <strong>Prywatność</strong>:
-              wyłącz <em>"Konto prywatne"</em> oraz zmień <em>"Polubione filmy"</em> na <strong>"Wszyscy"</strong>.
-            </p>
           </div>
         )}
       </main>
