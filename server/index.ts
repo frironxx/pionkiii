@@ -37,6 +37,10 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', name: 'Pionkiii Server', time: new Date().toISOString() });
 });
 
+app.get('/healthz', (req, res) => {
+  res.status(200).send('OK');
+});
+
 // Proxy strumieniowania wideo dla ominięcia ograniczeń CORS i Referer TikToka
 app.get('/api/stream', handleStreamProxy);
 
