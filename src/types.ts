@@ -34,6 +34,7 @@ export interface Player {
   isReady: boolean;
   score: number;
   streak: number;
+  hasPublicLikes?: boolean;
 }
 
 export type RoomStatus =
@@ -77,10 +78,12 @@ export interface RoundResult {
   video: RoundVideo;
   actualOwnerUserId: string;
   actualOwnerDisplayName: string;
+  actualOwnerUsername?: string;
   votes: Record<string, string>; // voterUserId -> votedForUserId
   pointsGained: Record<string, number>;
   stealthAwarded: boolean;
   isClutch: boolean;
+  correctGuessesCount?: number;
 }
 
 export interface LeaderboardEntry {

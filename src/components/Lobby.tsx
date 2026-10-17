@@ -148,6 +148,12 @@ export const Lobby: React.FC<LobbyProps> = ({
                     )}
                   </div>
                   <div className="text-[10px] text-slate-400 truncate">@{player.tiktokUsername}</div>
+                  {player.hasPublicLikes === false && (
+                    <div className="text-[8px] font-bold text-amber-400/90 flex items-center gap-0.5 truncate" title="Prywatne polubienia na TikToku">
+                      <span>⚠️</span>
+                      <span className="truncate">Ukryte polubienia</span>
+                    </div>
+                  )}
 
                   <div className="mt-1">
                     {player.isReady ? (
@@ -165,10 +171,20 @@ export const Lobby: React.FC<LobbyProps> = ({
             );
           })}
         </div>
+
+        {/* Wskazówka jeśli gracz ma ukryte polubienia na TikToku */}
+        {me && me.hasPublicLikes === false && (
+          <div className="w-full bg-amber-500/10 border border-amber-500/30 rounded-xl px-2.5 py-1.5 flex items-center gap-2 text-left flex-shrink-0">
+            <span className="text-sm flex-shrink-0">⚠️</span>
+            <div className="text-[10px] text-amber-300 leading-tight">
+              <strong className="text-amber-200">Twoje polubienia na TT są ukryte!</strong> Aby Twoje filmy były w grze: TikTok &rarr; Profil &rarr; Ustawienia &rarr; Prywatność &rarr; Polubione filmy &rarr; <strong>Wszyscy</strong>.
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Dolny pasek akcji */}
-      <footer className="w-full pt-2 flex flex-col items-center gap-2 flex-shrink-0">
+      <footer className="w-full pt-1 flex flex-col items-center gap-2 flex-shrink-0">
         <button
           onClick={onToggleReady}
           disabled={isStarting}

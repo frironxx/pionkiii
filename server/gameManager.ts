@@ -23,6 +23,7 @@ export interface Player {
   streak: number;
   correctGuessesCount: number;
   stealthBonusCount: number;
+  hasPublicLikes?: boolean;
 }
 
 export interface RoundVote {
@@ -46,10 +47,12 @@ export interface RoundResult {
   video: CachedLikedVideo;
   actualOwnerUserId: string;
   actualOwnerDisplayName: string;
+  actualOwnerUsername: string;
   votes: Record<string, string>; // voterUserId -> votedForUserId
   pointsGained: Record<string, number>; // userId -> points earned this round
   stealthAwarded: boolean;
   isClutch: boolean;
+  correctGuessesCount: number;
 }
 
 export class GameRoom {
@@ -133,12 +136,22 @@ export class GameManager {
       streak: 0,
       correctGuessesCount: 0,
       stealthBonusCount: 0,
+      hasPublicLikes: true,
     };
 
     room.players.set(player.userId, player);
     console.log(`[GameManager] Gracz ${player.displayName} (@${player.tiktokUsername}) dołączył do ${room.id} (${room.players.size}/4)`);
 
     this.broadcastRoomState(room);
+
+    // Sprawdź w tle czy gracz ma publiczne polubienia na TikToku i zaktualizuj stan lobby
+    TikTokService.fetchLikedVideos(player.tiktokUsername).then((vids) => {
+      const p = room.players.get(player.userId);
+      if (p) {
+        p.hasPublicLikes = (vids && vids.length > 0);
+        this.broadcastRoomState(room);
+      }
+    }).catch(() => {});
 
     // Jeśli dołączył 4. gracz, zacznij automatyczne odliczanie 3s
     if (room.players.size === 4 && room.status === 'LOBBY') {
@@ -217,17 +230,20 @@ export class GameManager {
 
     // Pobierz polubione filmy dla każdego gracza
     for (const player of room.players.values()) {
-      let videos = await TikTokService.fetchLikedVideos(player.tiktokUsername);
-      if (videos.length === 0) {
-        console.warn(`[GameManager] Brak filmów dla @${player.tiktokUsername}, próba fallbacku z testowego konta...`);
-        // Jeśli gracz ma puste konto, uzupełnij z bazy lub @friron411k jako awaryjne
-        videos = await TikTokService.fetchLikedVideos('friron411k');
-      }
+      const videos = await TikTokService.fetchLikedVideos(player.tiktokUsername);
+      // BEZWZGLĘDNA ZASADA: Tylko prawdziwe filmy tego gracza!
+      // Żadnego fałszywego przypisywania filmów z innego konta!
+      const realVideos = (videos || []).filter(
+        (v) => v.tiktokUsername.toLowerCase() === player.tiktokUsername.toLowerCase()
+      );
+
+      console.log(`[GameManager] Gracz ${player.displayName} (@${player.tiktokUsername}): ${realVideos.length} filmów.`);
+
       playersMap.set(player.userId, {
         userId: player.userId,
         username: player.tiktokUsername,
         displayName: player.displayName,
-        videos,
+        videos: realVideos,
       });
     }
 
@@ -235,7 +251,10 @@ export class GameManager {
     console.log(`[GameManager] Zbudowano talię ${room.deck.length} rund dla pokoju ${room.id}`);
 
     if (room.deck.length === 0) {
-      this.io.to(room.id).emit('error_message', { message: 'Nie udało się pobrać filmów z TikToka.' });
+      this.io.to(room.id).emit('error_message', {
+        message:
+          'Brak filmów do gry! Upewnij się, że gracze mają włączone publiczne polubienia na TikToku (Profil -> Ustawienia -> Prywatność -> Polubione filmy -> Wszyscy).',
+      });
       room.status = 'LOBBY';
       this.broadcastRoomState(room);
       return;
@@ -319,7 +338,17 @@ export class GameManager {
     const currentRound = room.deck[room.currentRound - 1];
     const isOwner = voter.userId === currentRound.ownerUserId;
 
-    // Jeżeli głosuje właściciel, rejestrujemy atrapę głosu (poker face) bez wpływu na wynik
+    // OSOBA, KTÓREJ TO FILM, NIE MOŻE GŁOSOWAĆ!
+    if (isOwner) {
+      console.warn(`[GameManager] Odrzucono próbę głosu właściciela ${voter.displayName}`);
+      return;
+    }
+
+    // Jeśli gracz już oddał głos, nie przyjmuj powtórki
+    if (room.currentVotes.has(voter.userId)) {
+      return;
+    }
+
     const now = Date.now();
     const reactionTime = now - room.roundStartTime;
 
@@ -333,17 +362,20 @@ export class GameManager {
     // Poinformuj klienta o zaakceptowaniu głosu
     const sock = this.io.sockets.sockets.get(socketId);
     if (sock) {
-      sock.emit('vote_acknowledged', { votedForUserId, isOwner });
+      sock.emit('vote_acknowledged', { votedForUserId, isOwner: false });
     }
+
+    // Uprawnieni do głosowania to wszyscy gracze w pokoju poza właścicielem
+    const totalEligible = Math.max(1, room.players.size - 1);
 
     // Poinformuj pokój o liczbie oddanych głosów
     this.io.to(room.id).emit('vote_progress', {
       votedCount: room.currentVotes.size,
-      totalEligible: room.players.size,
+      totalEligible,
     });
 
-    // Jeżeli wszyscy gracze oddali głosy, natychmiast przejdź do odsłonięcia
-    if (room.currentVotes.size >= room.players.size) {
+    // Jeżeli wszyscy uprawnieni gracze oddali głosy, natychmiast przejdź do odsłonięcia
+    if (room.currentVotes.size >= totalEligible) {
       if (room.timer) {
         clearTimeout(room.timer);
         room.timer = null;
@@ -353,6 +385,11 @@ export class GameManager {
   }
 
   private proceedToReveal(room: GameRoom) {
+    if (room.timer) {
+      clearTimeout(room.timer);
+      room.timer = null;
+    }
+
     const currentRound = room.deck[room.currentRound - 1];
     const actualOwnerId = currentRound.ownerUserId;
     const isClutch = currentRound.isClutch;
@@ -362,15 +399,15 @@ export class GameManager {
     const pointsGained: Record<string, number> = {};
     let correctGuessCount = 0;
 
-    // Inicjalizuj zyski punktowe
+    // Inicjalizuj zyski punktowe na 0
     room.players.forEach((p) => {
       pointsGained[p.userId] = 0;
     });
 
-    // 1. Sprawdź głosy pozostałych graczy
+    // 1. Sprawdź głosy pozostałych graczy (nie-właścicieli)
     room.players.forEach((player) => {
       if (player.userId === actualOwnerId) {
-        return; // Właściciel nie zgaduje siebie
+        return; // Właściciel nie głosuje na siebie
       }
 
       const vote = room.currentVotes.get(player.userId);
@@ -387,7 +424,6 @@ export class GameManager {
           let basePoints = 200;
 
           // Bonus za szybkość reakcji (+50 do +200 pkt)
-          // Wykładniczy/liniowy spadek od startu wideo
           const timeFrac = Math.min(1, Math.max(0, vote.reactionTimeMs / room.roundDurationMs));
           const speedBonus = Math.round(200 * (1 - timeFrac));
 
@@ -414,8 +450,8 @@ export class GameManager {
       }
     });
 
-    // 2. Bonus Niewidzialności (Stealth Bonus) dla właściciela
-    // Jeżeli NIKT nie odgadł właściciela:
+    // 2. Bonus Kamuflażu (Stealth Bonus) dla właściciela
+    // WŁAŚCICIEL DOSTAJE PUNKTY TYLKO WTEDY, GDY NIKT GO NIE ZGADŁ!
     let stealthAwarded = false;
     const ownerPlayer = room.players.get(actualOwnerId);
 
@@ -427,6 +463,10 @@ export class GameManager {
         const stealthPoints = Math.round(stealthBase * clutchMultiplier);
         pointsGained[actualOwnerId] = stealthPoints;
         ownerPlayer.score += stealthPoints;
+        console.log(`[GameManager] Właściciel ${ownerPlayer.displayName} zdobył bonus za kamuflaż: +${stealthPoints} pkt! Nikt go nie odgadł.`);
+      } else {
+        pointsGained[actualOwnerId] = 0;
+        console.log(`[GameManager] Właściciel ${ownerPlayer.displayName} odgadnięty przez ${correctGuessCount} graczy. 0 pkt.`);
       }
     }
 
@@ -435,41 +475,35 @@ export class GameManager {
       video: currentRound.video,
       actualOwnerUserId: actualOwnerId,
       actualOwnerDisplayName: currentRound.ownerDisplayName,
+      actualOwnerUsername: currentRound.ownerUsername,
       votes: votesMap,
       pointsGained,
       stealthAwarded,
       isClutch,
+      correctGuessesCount: correctGuessCount,
     };
 
-    // Faza 1: Pokazanie kto na kogo głosował (1.5 sekundy)
-    room.status = 'ROUND_REVEAL_VOTES';
-    this.io.to(room.id).emit('reveal_votes_phase', {
-      votes: votesMap,
-      durationMs: 1500,
+    // NATYCHMIASTOWE ODSŁONIĘCIE: Prawdziwy właściciel, głosy i punkty bez żadnego ukrywania!
+    room.status = 'ROUND_REVEAL_OWNER';
+    this.io.to(room.id).emit('reveal_owner_phase', {
+      result: room.lastRoundResult,
+      standings: this.getStandings(room),
+      correctGuessesCount: correctGuessCount,
     });
 
     room.timer = setTimeout(() => {
-      // Faza 2: Odsłonięcie prawdziwego właściciela i przyznanie punktów (3.5 sekundy)
-      room.status = 'ROUND_REVEAL_OWNER';
-      this.io.to(room.id).emit('reveal_owner_phase', {
-        result: room.lastRoundResult,
+      // Faza 3: Intermisja i tablica wyników (3 sekundy)
+      room.status = 'ROUND_INTERMISSION';
+      this.io.to(room.id).emit('round_intermission', {
+        roundNumber: room.currentRound,
         standings: this.getStandings(room),
+        nextRoundIn: 3,
       });
 
       room.timer = setTimeout(() => {
-        // Faza 3: Intermisja i tablica wyników (3 sekundy)
-        room.status = 'ROUND_INTERMISSION';
-        this.io.to(room.id).emit('round_intermission', {
-          roundNumber: room.currentRound,
-          standings: this.getStandings(room),
-          nextRoundIn: 3,
-        });
-
-        room.timer = setTimeout(() => {
-          this.startNextRound(room);
-        }, 3000);
-      }, 3500);
-    }, 1500);
+        this.startNextRound(room);
+      }, 3000);
+    }, 4500);
   }
 
   private endGame(room: GameRoom) {
