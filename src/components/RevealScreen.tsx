@@ -28,18 +28,16 @@ export const RevealScreen: React.FC<RevealScreenProps> = ({
   const isMeOwner = result?.actualOwnerUserId === myUserId;
 
   return (
-    <div className="w-full max-w-xl mx-auto flex flex-col items-center space-y-5 animate-fade-in">
+    <div className="w-full max-w-lg mx-auto flex flex-col items-center gap-3 animate-fade-in px-1">
       {phase === 'ROUND_REVEAL_VOTES' ? (
         /* Faza 1: Pokazanie głosów */
-        <div className="w-full glass-panel rounded-3xl p-6 text-center space-y-4 border border-slate-800 shadow-2xl">
-          <div className="text-xs font-bold text-amber-400 uppercase tracking-widest flex items-center justify-center gap-1.5">
-            <Sparkles className="w-4 h-4" />
-            <span>Kto jak zagłosował?</span>
+        <div className="w-full bg-slate-900/90 border border-slate-700/80 rounded-2xl p-4 text-center space-y-2.5 shadow-2xl backdrop-blur-md">
+          <div className="text-[10px] font-black text-amber-400 uppercase tracking-widest flex items-center justify-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Kto jak wytypował?</span>
           </div>
 
-          <div className="text-xl font-black text-white">Rozszyfrowywanie wyborów...</div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+          <div className="grid grid-cols-2 gap-2 pt-1">
             {players.map((p) => {
               const votedForId = result?.votes[p.userId];
               const votedTarget = votedForId ? getPlayer(votedForId) : null;
@@ -47,14 +45,14 @@ export const RevealScreen: React.FC<RevealScreenProps> = ({
               return (
                 <div
                   key={p.userId}
-                  className="bg-slate-900/80 rounded-2xl p-3 border border-slate-800 flex items-center justify-between"
+                  className="bg-slate-950/70 rounded-xl p-2 border border-slate-800 flex items-center justify-between text-xs"
                 >
-                  <span className="text-xs font-bold text-slate-300 truncate">{p.displayName}</span>
-                  <div className="flex items-center gap-1.5 text-xs">
-                    <span className="text-slate-500">→</span>
-                    <span className="font-bold text-emerald-400">
-                      {votedTarget ? votedTarget.displayName : 'Brak głosu'}
-                    </span>
+                  <span className="font-bold text-slate-300 truncate max-w-[45%]">
+                    {p.displayName}
+                  </span>
+                  <div className="flex items-center gap-1 text-[11px] font-black text-emerald-400 truncate">
+                    <span>👉</span>
+                    <span className="truncate">{votedTarget ? votedTarget.displayName : 'Brak'}</span>
                   </div>
                 </div>
               );
@@ -62,71 +60,69 @@ export const RevealScreen: React.FC<RevealScreenProps> = ({
           </div>
         </div>
       ) : (
-        /* Faza 2: Odsłonięcie Prawdziwego Właściciela */
-        <div className="w-full glass-panel-accent rounded-3xl p-6 text-center space-y-5 border border-emerald-500/30 shadow-2xl relative overflow-hidden">
-          {/* Tytuł nagłówka */}
-          <div className="text-xs font-black uppercase tracking-widest text-emerald-400 flex items-center justify-center gap-1.5">
-            <Award className="w-4 h-4" />
-            <span>PRAWDZIWY WŁAŚCICIEL POLUBIENIA</span>
+        /* Faza 2: Efektowne odsłonięcie prawdziwego właściciela */
+        <div className="w-full bg-gradient-to-b from-slate-900/95 to-slate-950/95 border-2 border-emerald-500/50 rounded-3xl p-4 text-center space-y-3 shadow-2xl backdrop-blur-md relative overflow-hidden">
+          {/* Etykieta nagłówka */}
+          <div className="text-[10px] font-black uppercase tracking-widest text-emerald-400 flex items-center justify-center gap-1">
+            <Award className="w-3.5 h-3.5" />
+            <span>TO POLUBIENIE NALEŻY DO:</span>
           </div>
 
           {/* Awatar i nick właściciela */}
-          <div className="flex flex-col items-center justify-center gap-3">
+          <div className="flex items-center justify-center gap-4 bg-slate-950/60 py-3 px-4 rounded-2xl border border-slate-800/80">
             <div
-              className="w-24 h-24 rounded-3xl flex items-center justify-center text-5xl shadow-2xl border-4 border-emerald-400/80 transform animate-bounce-short"
+              className="w-16 h-16 rounded-2xl flex items-center justify-center text-4xl shadow-xl border-2 border-emerald-400/80 overflow-hidden transform animate-bounce-short"
               style={{ backgroundColor: owner?.avatarBg || '#10b981' }}
             >
               {isOwnerCustom ? (
                 <img
                   src={owner?.avatarId}
                   alt={owner?.displayName}
-                  className="w-full h-full rounded-2xl object-cover"
+                  className="w-full h-full object-cover"
                 />
               ) : (
                 <span>{ownerPreset?.icon || '♟️'}</span>
               )}
             </div>
 
-            <div>
-              <h3 className="text-2xl font-black text-white">{owner?.displayName}</h3>
-              <div className="text-xs font-semibold text-emerald-400">@{owner?.tiktokUsername}</div>
+            <div className="text-left">
+              <h3 className="text-xl font-black text-white leading-tight">{owner?.displayName}</h3>
+              <div className="text-xs font-bold text-emerald-400">@{owner?.tiktokUsername}</div>
             </div>
           </div>
 
-          {/* Dedykowany baner z punktami gracza */}
-          {myPoints > 0 ? (
-            <div className="bg-emerald-500/20 border border-emerald-500/40 rounded-2xl p-3 flex items-center justify-center gap-2">
-              <Sparkles className="w-5 h-5 text-emerald-400" />
-              <span className="text-base font-extrabold text-emerald-300">
-                Zdobywasz +{myPoints} pkt!
-              </span>
-            </div>
-          ) : isMeOwner ? (
-            <div className="bg-slate-900/60 rounded-2xl p-3 text-xs text-slate-400">
-              Ktoś odgadł Twój film – brak punktów niewidzialności w tej rundzie.
-            </div>
-          ) : (
-            <div className="bg-slate-900/60 rounded-2xl p-3 text-xs text-rose-400 font-semibold flex items-center justify-center gap-1.5">
-              <X className="w-4 h-4" />
-              Niestety, to nie ten gracz!
-            </div>
-          )}
+          {/* Wynik punktowy gracza */}
+          <div className="flex items-center justify-center">
+            {myPoints > 0 ? (
+              <div className="w-full py-2 px-3 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-black text-sm flex items-center justify-center gap-1.5 shadow">
+                <Sparkles className="w-4 h-4 text-emerald-400" />
+                <span>Brawo! Zdobywasz +{myPoints} pkt!</span>
+              </div>
+            ) : isMeOwner ? (
+              <div className="w-full py-2 px-3 rounded-xl bg-slate-800/80 text-slate-300 font-bold text-xs">
+                To Twój film – ktoś Cię rozszyfrował!
+              </div>
+            ) : (
+              <div className="w-full py-2 px-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 font-bold text-xs flex items-center justify-center gap-1.5">
+                <X className="w-4 h-4" />
+                <span>Pudło! To nie ten gracz.</span>
+              </div>
+            )}
+          </div>
 
-          {/* Bonus Niewidzialności (Stealth Bonus) */}
+          {/* Bonus Niewidzialności */}
           {result?.stealthAwarded && (
-            <div className="bg-violet-500/20 border border-violet-500/40 rounded-2xl p-3 flex items-center justify-center gap-2 animate-pulse">
-              <ShieldAlert className="w-5 h-5 text-violet-400" />
-              <span className="text-xs sm:text-sm font-black text-violet-300">
-                🤫 BONUS NIEWIDZIALNOŚCI! Nikt nie odgadł filmu {owner?.displayName}!
-              </span>
+            <div className="py-1.5 px-3 rounded-xl bg-violet-500/20 border border-violet-500/40 text-violet-300 text-xs font-black flex items-center justify-center gap-1.5 animate-pulse">
+              <ShieldAlert className="w-4 h-4 text-violet-400" />
+              <span>🤫 BONUS NIEWIDZIALNOŚCI! Nikt nie zgadł {owner?.displayName}!</span>
             </div>
           )}
 
-          {/* Rundy Finałowe x2 */}
+          {/* Informacja o rundzie x2 */}
           {result?.isClutch && (
-            <div className="text-xs font-extrabold text-amber-400 uppercase tracking-widest flex items-center justify-center gap-1">
-              <Flame className="w-4 h-4 fill-amber-400" />
-              <span>Rundy Finałowe: Podwójne punkty aktywne (x2)!</span>
+            <div className="text-[10px] font-black text-amber-400 uppercase tracking-widest flex items-center justify-center gap-1">
+              <Flame className="w-3.5 h-3.5 fill-amber-400" />
+              <span>Rundy Finałowe: Podwójne punkty (x2)!</span>
             </div>
           )}
         </div>

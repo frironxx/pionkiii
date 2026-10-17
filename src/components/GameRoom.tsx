@@ -4,7 +4,7 @@ import { VideoPlayer } from './VideoPlayer';
 import { VotingOverlay } from './VotingOverlay';
 import { RevealScreen } from './RevealScreen';
 import { Leaderboard } from './Leaderboard';
-import { Flame, Trophy } from 'lucide-react';
+import { Flame } from 'lucide-react';
 
 interface GameRoomProps {
   roundData: RoundStartPayload | null;
@@ -45,10 +45,10 @@ export const GameRoom: React.FC<GameRoomProps> = ({
 
   if (!roundData) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400">
+      <div className="h-[100dvh] bg-slate-950 flex items-center justify-center text-slate-400">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-          <span className="text-sm font-bold">Przygotowywanie rundy...</span>
+          <span className="text-xs font-bold">Przygotowywanie rundy...</span>
         </div>
       </div>
     );
@@ -59,32 +59,31 @@ export const GameRoom: React.FC<GameRoomProps> = ({
   const isIntermission = phase === 'ROUND_INTERMISSION';
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-between p-3 sm:p-6 text-slate-100 max-w-4xl mx-auto">
-      {/* Pasek Górny */}
-      <header className="w-full flex items-center justify-between pb-3 border-b border-slate-800/80">
-        <div className="flex items-center gap-2">
-          <span className="text-lg">♟️</span>
-          <div className="text-sm font-black text-white">
-            Runda <span className="text-emerald-400">{roundData.roundNumber}</span> z {roundData.totalRounds}
+    <div className="h-[100dvh] max-h-[100dvh] w-full bg-slate-950 text-slate-100 flex flex-col justify-between overflow-hidden p-2 sm:p-4 select-none">
+      {/* Pasek Górny (Kompaktowy) */}
+      <header className="w-full max-w-lg mx-auto flex items-center justify-between py-1 px-1 flex-shrink-0">
+        <div className="flex items-center gap-1.5">
+          <span className="text-base">♟️</span>
+          <div className="text-xs font-black text-white">
+            Runda <span className="text-emerald-400">{roundData.roundNumber}</span>/{roundData.totalRounds}
           </div>
         </div>
 
         {/* Znacznik Rundy Finałowej x2 */}
         {roundData.isClutch ? (
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-black uppercase tracking-wider animate-pulse">
-            <Flame className="w-4 h-4 fill-amber-400" />
-            <span>Rundy Finałowe x2!</span>
+          <div className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-400 text-[10px] font-black uppercase tracking-wider animate-pulse">
+            <Flame className="w-3 h-3 fill-amber-400" />
+            <span>FINAŁ x2!</span>
           </div>
         ) : (
-          <div className="text-xs text-slate-400 font-semibold flex items-center gap-1">
-            <Trophy className="w-3.5 h-3.5 text-slate-500" />
-            <span>Zgadnij polubienie</span>
+          <div className="text-[11px] text-slate-400 font-bold">
+            Pionkiii ♟️
           </div>
         )}
       </header>
 
-      {/* Środek: Wideo lub Tablica Intermisji */}
-      <main className="w-full flex-1 flex flex-col justify-center items-center my-3 max-w-xl">
+      {/* Środek: Wideo LUB Tabela Wyników */}
+      <main className="w-full flex-1 flex flex-col justify-center items-center min-h-0 py-1 overflow-hidden">
         {isIntermission ? (
           <Leaderboard
             roundNumber={roundData.roundNumber}
@@ -94,46 +93,45 @@ export const GameRoom: React.FC<GameRoomProps> = ({
             nextRoundInSeconds={nextRoundInSeconds}
           />
         ) : (
-          <div className="w-full flex flex-col items-center space-y-4">
-            {/* Odtwarzacz wideo z bezstratnym preloaderem */}
+          <div className="w-full h-full flex flex-col items-center justify-center min-h-0">
             <VideoPlayer
               streamUrl={roundData.video.streamUrl}
               coverUrl={roundData.video.coverUrl}
               nextVideoUrl={roundData.nextVideoUrl}
-              authorNickname={roundData.video.authorNickname}
-              description={roundData.video.description}
               isOwner={roundData.isOwner}
             />
-
-            {/* Faza głosowania */}
-            {isVoting && (
-              <VotingOverlay
-                candidates={roundData.candidates}
-                myUserId={myUserId}
-                isOwner={roundData.isOwner}
-                timeLeftSeconds={timeLeft}
-                totalDurationSeconds={Math.round(roundData.durationMs / 1000)}
-                isClutch={roundData.isClutch}
-                onCastVote={onCastVote}
-              />
-            )}
-
-            {/* Faza odkrywania */}
-            {isReveal && (
-              <RevealScreen
-                phase={phase}
-                result={roundResult}
-                players={players}
-                myUserId={myUserId}
-              />
-            )}
           </div>
         )}
       </main>
 
-      {/* Stopka */}
-      <footer className="w-full text-center py-1 text-[11px] text-slate-500 font-medium">
-        Pionkiii ♟️ • Runda {roundData.roundNumber} z {roundData.totalRounds}
+      {/* Dolny panel interakcji: Głosowanie lub Odkrycie (Zawsze mieści się na ekranie) */}
+      <footer className="w-full max-w-lg mx-auto flex-shrink-0 pt-1 pb-1">
+        {isVoting && (
+          <VotingOverlay
+            candidates={roundData.candidates}
+            myUserId={myUserId}
+            isOwner={roundData.isOwner}
+            timeLeftSeconds={timeLeft}
+            totalDurationSeconds={Math.round(roundData.durationMs / 1000)}
+            isClutch={roundData.isClutch}
+            onCastVote={onCastVote}
+          />
+        )}
+
+        {isReveal && (
+          <RevealScreen
+            phase={phase}
+            result={roundResult}
+            players={players}
+            myUserId={myUserId}
+          />
+        )}
+
+        {isIntermission && (
+          <div className="text-center text-[10px] text-slate-500 font-medium py-1">
+            Kolejna runda za chwilę...
+          </div>
+        )}
       </footer>
     </div>
   );

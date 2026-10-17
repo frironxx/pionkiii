@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { AVATAR_PRESETS } from './AvatarPicker';
-import { Check, ShieldAlert, Sparkles } from 'lucide-react';
+import { Check, Sparkles } from 'lucide-react';
 
 interface Candidate {
   userId: string;
@@ -31,27 +31,24 @@ export const VotingOverlay: React.FC<VotingOverlayProps> = ({
   const [selectedVoteId, setSelectedVoteId] = useState<string | null>(null);
 
   const handleVoteClick = (candidateId: string) => {
-    if (selectedVoteId) return; // Już zagłosowano
+    if (selectedVoteId) return;
     setSelectedVoteId(candidateId);
     onCastVote(candidateId);
   };
 
-  // Pokaż wszystkich graczy poza sobą (do głosowania)
+  // Kandydaci (inni gracze)
   const voteableCandidates = candidates.filter((c) => c.userId !== myUserId);
 
   const progressPercent = Math.max(0, Math.min(100, (timeLeftSeconds / totalDurationSeconds) * 100));
 
   return (
-    <div className="w-full max-w-xl mx-auto flex flex-col items-center space-y-4">
-      {/* Pasek postępu czasu */}
-      <div className="w-full space-y-1.5">
-        <div className="flex justify-between items-center text-xs font-bold text-slate-400">
-          <span>KTO POLUBIŁ TEN FILM?</span>
-          <span className={`${timeLeftSeconds <= 5 ? 'text-rose-400 animate-pulse font-black' : 'text-emerald-400'}`}>
-            {timeLeftSeconds}s
-          </span>
-        </div>
-        <div className="w-full h-2 rounded-full bg-slate-900 border border-slate-800 overflow-hidden">
+    <div className="w-full max-w-lg mx-auto flex flex-col items-center gap-2 px-1">
+      {/* Kompaktowy pasek czasu */}
+      <div className="w-full flex items-center gap-2">
+        <span className="text-[10px] font-black tracking-wider uppercase text-slate-400 whitespace-nowrap">
+          KTO TO POLUBIŁ?
+        </span>
+        <div className="flex-1 h-1.5 rounded-full bg-slate-900 border border-slate-800 overflow-hidden">
           <div
             className={`h-full transition-all duration-300 ease-linear rounded-full ${
               timeLeftSeconds <= 5 ? 'bg-rose-500' : isClutch ? 'bg-amber-400' : 'bg-emerald-500'
@@ -59,69 +56,83 @@ export const VotingOverlay: React.FC<VotingOverlayProps> = ({
             style={{ width: `${progressPercent}%` }}
           />
         </div>
+        <span
+          className={`text-[11px] font-black w-6 text-right ${
+            timeLeftSeconds <= 5 ? 'text-rose-400 animate-pulse' : 'text-emerald-400'
+          }`}
+        >
+          {timeLeftSeconds}s
+        </span>
       </div>
 
       {/* Dyskretna informacja dla właściciela filmu (Poker Face) */}
       {isOwner && (
-        <div className="w-full bg-violet-950/40 border border-violet-500/30 rounded-2xl p-3 flex items-center gap-3 animate-fade-in shadow-lg">
-          <div className="text-2xl">🤫</div>
-          <div className="flex-1 text-left">
-            <div className="text-xs font-black text-violet-300 uppercase tracking-wide">
-              To Twój polubiony film!
-            </div>
-            <div className="text-[11px] text-slate-300">
-              Zachowaj pokerową twarz. Jeśli nikt Cię nie zgadnie, zgarniasz <strong>Bonus Niewidzialności</strong>!
-              (Możesz klikać dla zmyłki).
-            </div>
+        <div className="w-full py-1.5 px-3 rounded-xl bg-violet-950/60 border border-violet-500/40 flex items-center justify-between text-left">
+          <div className="flex items-center gap-1.5">
+            <span className="text-sm">🤫</span>
+            <span className="text-[11px] font-black text-violet-300 uppercase">
+              To Twój film! Poker face
+            </span>
           </div>
+          <span className="text-[9px] text-violet-400 font-semibold">
+            (Klikaj dla zmyłki)
+          </span>
         </div>
       )}
 
-      {/* Przyciski kandydatów do wyboru */}
-      <div className="w-full grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+      {/* Przyciski graczy do wyboru - dopasowane do 1 ekranu */}
+      <div
+        className={`w-full grid gap-2 ${
+          voteableCandidates.length <= 2
+            ? 'grid-cols-2'
+            : voteableCandidates.length === 3
+            ? 'grid-cols-3'
+            : 'grid-cols-3 sm:grid-cols-4'
+        }`}
+      >
         {voteableCandidates.map((candidate) => {
           const isSelected = selectedVoteId === candidate.userId;
           const preset = AVATAR_PRESETS.find((p) => p.id === candidate.avatarId);
-          const isCustomImg = candidate.avatarId.startsWith('data:image');
+          const isCustom = candidate.avatarId.startsWith('data:image');
 
           return (
             <button
               key={candidate.userId}
               onClick={() => handleVoteClick(candidate.userId)}
               disabled={!!selectedVoteId && !isOwner}
-              className={`relative p-3 rounded-2xl border transition-all flex flex-col items-center justify-center gap-2 ${
+              className={`relative py-2 px-2 rounded-2xl border transition-all flex flex-col items-center justify-center gap-1 select-none ${
                 isSelected
-                  ? 'bg-emerald-500/20 border-emerald-400 scale-[1.02] shadow-lg shadow-emerald-500/10'
+                  ? 'bg-emerald-500/25 border-emerald-400 scale-[1.03] shadow-lg shadow-emerald-500/20'
                   : selectedVoteId
-                  ? 'bg-slate-900/40 border-slate-800 opacity-60'
-                  : 'bg-slate-900/80 hover:bg-slate-850 border-slate-700/60 hover:border-emerald-500/40 transform hover:scale-[1.02] active:scale-95'
+                  ? 'bg-slate-900/40 border-slate-800/80 opacity-60'
+                  : 'bg-slate-900/80 hover:bg-slate-850 active:scale-95 border-slate-700/70 shadow-md'
               }`}
             >
-              {/* Awatar kandydata */}
+              {/* Awatar / Zdjęcie */}
               <div
-                className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl shadow-md border border-white/10"
+                className="w-11 h-11 rounded-xl flex items-center justify-center text-xl shadow border border-white/20 overflow-hidden"
                 style={{ backgroundColor: candidate.avatarBg }}
               >
-                {isCustomImg ? (
+                {isCustom ? (
                   <img
                     src={candidate.avatarId}
                     alt={candidate.displayName}
-                    className="w-full h-full rounded-xl object-cover"
+                    className="w-full h-full object-cover"
                   />
                 ) : (
                   <span>{preset?.icon || '♟️'}</span>
                 )}
               </div>
 
-              {/* Nazwa */}
-              <span className="text-xs font-bold text-white truncate max-w-full">
+              {/* Nick */}
+              <span className="text-[11px] font-black text-white truncate max-w-full">
                 {candidate.displayName}
               </span>
 
-              {/* Znacznik zaznaczenia */}
+              {/* Znacznik wyboru */}
               {isSelected && (
-                <div className="absolute top-2 right-2 bg-emerald-500 text-slate-950 p-0.5 rounded-full shadow">
-                  <Check className="w-3.5 h-3.5 stroke-[3]" />
+                <div className="absolute top-1.5 right-1.5 bg-emerald-500 text-slate-950 p-0.5 rounded-full shadow-md">
+                  <Check className="w-3 h-3 stroke-[3]" />
                 </div>
               )}
             </button>
@@ -129,11 +140,11 @@ export const VotingOverlay: React.FC<VotingOverlayProps> = ({
         })}
       </div>
 
-      {/* Komunikat o zablokowanym głosie */}
+      {/* Komunikat o oddanym głosie */}
       {selectedVoteId && (
-        <div className="text-xs font-semibold text-emerald-400 flex items-center gap-1.5 animate-pulse">
-          <Sparkles className="w-3.5 h-3.5" />
-          <span>Głos oddany! Czekamy na pozostałych graczy...</span>
+        <div className="text-[10px] font-bold text-emerald-400 flex items-center gap-1">
+          <Sparkles className="w-3 h-3" />
+          <span>Głos oddany! Czekamy na resztę...</span>
         </div>
       )}
     </div>
