@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Volume2, VolumeX, AlertCircle, Play } from 'lucide-react';
+import { Volume2, VolumeX, AlertCircle } from 'lucide-react';
 
 interface VideoPlayerProps {
   streamUrl: string;
@@ -17,41 +17,37 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const videoRef = useRef<HTMLVideoElement>(null);
   const nextVideoRef = useRef<HTMLVideoElement>(null);
 
-  // Odczytaj preferencję dźwięku z pamięci
   const [isMuted, setIsMuted] = useState(() => {
     return localStorage.getItem('pionkiii_sound_enabled') !== 'true';
   });
-  const [hasStarted, setHasStarted] = useState(false);
   const [hasError, setHasError] = useState(false);
+  const [showSoundToast, setShowSoundToast] = useState(false);
 
   useEffect(() => {
     setHasError(false);
     if (videoRef.current) {
       videoRef.current.currentTime = 0;
 
-      // Spróbuj odtworzyć z dźwiękiem jeśli użytkownik go włączył
       const soundWanted = localStorage.getItem('pionkiii_sound_enabled') === 'true';
       videoRef.current.muted = !soundWanted;
+      videoRef.current.volume = 1.0;
       setIsMuted(!soundWanted);
 
       const playPromise = videoRef.current.play();
       if (playPromise !== undefined) {
-        playPromise
-          .then(() => setHasStarted(true))
-          .catch((err) => {
-            console.warn('[Video] Przeglądarka zablokowała autoodtwarzanie z dźwiękiem:', err);
-            // Fallback na wyciszone
-            if (videoRef.current) {
-              videoRef.current.muted = true;
-              setIsMuted(true);
-              videoRef.current.play().then(() => setHasStarted(true));
-            }
-          });
+        playPromise.catch(() => {
+          // Jeśli autoplay z dźwiękiem zablokowany przez przeglądarkę, odpal wyciszone
+          if (videoRef.current) {
+            videoRef.current.muted = true;
+            setIsMuted(true);
+            videoRef.current.play().catch(() => {});
+          }
+        });
       }
     }
   }, [streamUrl]);
 
-  // Ciche preładowanie kolejnego filmu
+  // Cichy preloader następnej rundy
   useEffect(() => {
     if (nextVideoUrl && nextVideoRef.current) {
       nextVideoRef.current.src = nextVideoUrl;
@@ -59,7 +55,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
   }, [nextVideoUrl]);
 
-  // Włączenie/wyłączenie dźwięku (zapisywane na stałe)
   const toggleSound = (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     if (videoRef.current) {
@@ -71,6 +66,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
       if (!nextMuted) {
         videoRef.current.play().catch(() => {});
+        setShowSoundToast(true);
+        setTimeout(() => setShowSoundToast(false), 2000);
       }
     }
   };
@@ -78,9 +75,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   return (
     <div
       onClick={() => toggleSound()}
-      className="relative w-full h-full max-h-[58dvh] sm:max-h-[64dvh] aspect-[9/16] rounded-2xl overflow-hidden bg-black shadow-2xl border border-slate-800/80 flex items-center justify-center cursor-pointer select-none group"
+      className="relative h-full max-h-full aspect-[9/16] w-auto max-w-full rounded-2xl overflow-hidden bg-black shadow-2xl border border-slate-800 flex items-center justify-center cursor-pointer select-none group"
     >
-      {/* Wideo bez żadnych ucięć */}
+      {/* Czyste wideo bez obcięć */}
       <video
         ref={videoRef}
         src={streamUrl}
@@ -92,10 +89,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         autoPlay
         muted={isMuted}
         onError={() => setHasError(true)}
-        className="w-full h-full object-contain bg-black"
+        className="w-full h-full object-contain bg-black pointer-events-none"
       />
 
-      {/* Ukryty preloader kolejnej rundy */}
+      {/* Ukryty preloader */}
       {nextVideoUrl && (
         <video
           ref={nextVideoRef}
@@ -107,27 +104,38 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         />
       )}
 
-      {/* Pływający przycisk dźwięku w prawym górnym rogu */}
+      {/* Pływający przycisk dźwięku */}
       <button
         onClick={toggleSound}
-        className="absolute top-2.5 right-2.5 z-30 p-2 rounded-full bg-black/70 hover:bg-black/90 backdrop-blur-md border border-white/20 text-white shadow-lg transition-transform active:scale-90"
+        className={`absolute top-2.5 right-2.5 z-30 p-2.5 rounded-full backdrop-blur-md border shadow-xl transition-transform active:scale-90 ${
+          isMuted
+            ? 'bg-amber-500/80 border-amber-300 text-slate-950 animate-pulse'
+            : 'bg-black/60 border-white/20 text-emerald-400'
+        }`}
         title={isMuted ? 'Dotknij, aby włączyć dźwięk' : 'Wycisz'}
       >
         {isMuted ? (
-          <VolumeX className="w-5 h-5 text-amber-400" />
+          <VolumeX className="w-5 h-5 stroke-[2.5]" />
         ) : (
-          <Volume2 className="w-5 h-5 text-emerald-400" />
+          <Volume2 className="w-5 h-5 stroke-[2.5]" />
         )}
       </button>
 
-      {/* Wyraźna plakietka zachęcająca do włączenia dźwięku na telefonie */}
+      {/* Duża pulsująca plakietka na górze wideo gdy wyciszone */}
       {isMuted && (
         <div
           onClick={toggleSound}
-          className="absolute top-2.5 left-2.5 z-30 flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/75 backdrop-blur-md border border-amber-400/40 text-amber-300 text-[11px] font-bold shadow-lg animate-pulse"
+          className="absolute top-2.5 left-2.5 z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-950/85 backdrop-blur-md border border-amber-400/60 text-amber-300 text-xs font-black shadow-xl"
         >
-          <VolumeX className="w-3.5 h-3.5 text-amber-400" />
-          <span>Dotknij, aby włączyć dźwięk 🔊</span>
+          <VolumeX className="w-4 h-4 text-amber-400" />
+          <span>DOTKNIJ EKRANU = DŹWIĘK 🔊</span>
+        </div>
+      )}
+
+      {/* Krótki toast potwierdzenia dźwięku */}
+      {showSoundToast && (
+        <div className="absolute center z-30 px-4 py-2 rounded-2xl bg-emerald-500/90 text-slate-950 text-xs font-black shadow-2xl animate-fade-in pointer-events-none">
+          Dźwięk włączony! 🔊
         </div>
       )}
 
@@ -135,7 +143,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       {hasError && (
         <div className="absolute inset-0 z-40 bg-black/90 flex flex-col items-center justify-center p-4 text-center">
           <AlertCircle className="w-8 h-8 text-rose-500 mb-2" />
-          <p className="text-xs font-bold text-white">Ładowanie wideo...</p>
+          <p className="text-xs font-bold text-white">Buforowanie strumienia...</p>
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -144,7 +152,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             }}
             className="mt-2 px-3 py-1 text-xs bg-slate-800 text-slate-200 rounded-lg"
           >
-            Odśwież
+            Odśwież wideo
           </button>
         </div>
       )}

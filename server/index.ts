@@ -15,10 +15,47 @@ const io = new Server(server, {
     origin: '*',
     methods: ['GET', 'POST'],
   },
+  maxHttpBufferSize: 2e7, // 20 MB dla bezpiecznego przesyłania zdjęć graczy
 });
 
 app.use(cors());
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '15mb' }));
+
+// Obsługa wgrywania i serwowania własnych zdjęć profilowych
+const avatarsDir = path.resolve(process.cwd(), 'data', 'avatars');
+if (!fs.existsSync(avatarsDir)) {
+  fs.mkdirSync(avatarsDir, { recursive: true });
+}
+
+app.post('/api/avatar/upload', (req, res) => {
+  try {
+    const { userId, imageBase64 } = req.body;
+    if (!userId || !imageBase64) {
+      res.status(400).json({ error: 'Brak danych zdjęcia' });
+      return;
+    }
+    const cleanId = userId.replace(/[^a-zA-Z0-9_-]/g, '');
+    const filePath = path.resolve(avatarsDir, `${cleanId}.jpg`);
+    const dataOnly = imageBase64.replace(/^data:image\/\w+;base64,/, '');
+    fs.writeFileSync(filePath, Buffer.from(dataOnly, 'base64'));
+    const publicUrl = `/api/avatar/${cleanId}?v=${Date.now()}`;
+    res.json({ success: true, avatarUrl: publicUrl });
+  } catch (err: any) {
+    console.error('[Avatar] Błąd zapisu zdjęcia:', err);
+    res.status(500).json({ error: 'Błąd zapisu pliku' });
+  }
+});
+
+app.get('/api/avatar/:userId', (req, res) => {
+  const cleanId = req.params.userId.replace(/[^a-zA-Z0-9_-]/g, '');
+  const filePath = path.resolve(avatarsDir, `${cleanId}.jpg`);
+  if (fs.existsSync(filePath)) {
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.sendFile(filePath);
+  } else {
+    res.status(404).send('Brak awatara');
+  }
+});
 
 // Serwuj statyczny build frontendu jeśli istnieje (folder dist)
 import path from 'path';

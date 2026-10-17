@@ -192,6 +192,7 @@ export const Lobby: React.FC<LobbyProps> = ({
       {/* Modal Awatara */}
       {showAvatarPicker && me && (
         <AvatarPicker
+          userId={me.userId}
           currentAvatarId={me.avatarId}
           currentBgColor={me.avatarBg}
           onSave={(avatarId, avatarBg) => {

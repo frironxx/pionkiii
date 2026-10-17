@@ -45,10 +45,10 @@ export const GameRoom: React.FC<GameRoomProps> = ({
 
   if (!roundData) {
     return (
-      <div className="h-[100dvh] bg-slate-950 flex items-center justify-center text-slate-400">
-        <div className="flex flex-col items-center gap-3">
+      <div className="fixed inset-0 bg-slate-950 flex items-center justify-center text-slate-400">
+        <div className="flex flex-col items-center gap-2">
           <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-          <span className="text-xs font-bold">Przygotowywanie rundy...</span>
+          <span className="text-xs font-bold">Ładowanie rundy...</span>
         </div>
       </div>
     );
@@ -59,9 +59,9 @@ export const GameRoom: React.FC<GameRoomProps> = ({
   const isIntermission = phase === 'ROUND_INTERMISSION';
 
   return (
-    <div className="h-[100dvh] max-h-[100dvh] w-full bg-slate-950 text-slate-100 flex flex-col justify-between overflow-hidden p-2 sm:p-4 select-none">
-      {/* Pasek Górny (Kompaktowy) */}
-      <header className="w-full max-w-lg mx-auto flex items-center justify-between py-1 px-1 flex-shrink-0">
+    <div className="fixed inset-0 w-full h-full bg-slate-950 text-slate-100 flex flex-col justify-between overflow-hidden p-2 select-none">
+      {/* Pasek Górny (Kompaktowy 32px) */}
+      <header className="w-full max-w-md mx-auto flex items-center justify-between py-0.5 px-1 flex-shrink-0">
         <div className="flex items-center gap-1.5">
           <span className="text-base">♟️</span>
           <div className="text-xs font-black text-white">
@@ -71,7 +71,7 @@ export const GameRoom: React.FC<GameRoomProps> = ({
 
         {/* Znacznik Rundy Finałowej x2 */}
         {roundData.isClutch ? (
-          <div className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-400 text-[10px] font-black uppercase tracking-wider animate-pulse">
+          <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-400 text-[10px] font-black uppercase tracking-wider animate-pulse">
             <Flame className="w-3 h-3 fill-amber-400" />
             <span>FINAŁ x2!</span>
           </div>
@@ -93,7 +93,7 @@ export const GameRoom: React.FC<GameRoomProps> = ({
             nextRoundInSeconds={nextRoundInSeconds}
           />
         ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center min-h-0">
+          <div className="w-full h-full flex items-center justify-center min-h-0 overflow-hidden">
             <VideoPlayer
               streamUrl={roundData.video.streamUrl}
               coverUrl={roundData.video.coverUrl}
@@ -104,8 +104,8 @@ export const GameRoom: React.FC<GameRoomProps> = ({
         )}
       </main>
 
-      {/* Dolny panel interakcji: Głosowanie lub Odkrycie (Zawsze mieści się na ekranie) */}
-      <footer className="w-full max-w-lg mx-auto flex-shrink-0 pt-1 pb-1">
+      {/* Dolny panel interakcji: Głosowanie lub Odkrycie (Zablokowany, zero skrolowania) */}
+      <footer className="w-full max-w-md mx-auto flex-shrink-0 pt-0.5 pb-1">
         {isVoting && (
           <VotingOverlay
             candidates={roundData.candidates}
@@ -128,8 +128,8 @@ export const GameRoom: React.FC<GameRoomProps> = ({
         )}
 
         {isIntermission && (
-          <div className="text-center text-[10px] text-slate-500 font-medium py-1">
-            Kolejna runda za chwilę...
+          <div className="text-center text-[10px] text-slate-500 font-medium py-0.5">
+            Przygotowanie do kolejnej rundy...
           </div>
         )}
       </footer>

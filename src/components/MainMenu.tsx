@@ -241,6 +241,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
       {/* Modal Awatara */}
       {showAvatarPicker && (
         <AvatarPicker
+          userId={profile.id}
           currentAvatarId={profile.avatarId}
           currentBgColor={profile.avatarBg}
           onSave={handleSaveAvatar}
