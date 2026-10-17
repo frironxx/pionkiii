@@ -35,6 +35,7 @@ export interface Player {
   score: number;
   streak: number;
   hasPublicLikes?: boolean;
+  videoCount?: number;
 }
 
 export type RoomStatus =

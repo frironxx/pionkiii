@@ -182,6 +182,10 @@ io.on('connection', (socket) => {
     gameManager.handleUpdateProfile(socket.id, updates);
   });
 
+  socket.on('refresh_tiktok', () => {
+    gameManager.handleRefreshTikTok(socket.id);
+  });
+
   socket.on('cast_vote', ({ votedForUserId }) => {
     gameManager.handleCastVote(socket.id, votedForUserId);
   });

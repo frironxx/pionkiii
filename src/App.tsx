@@ -122,7 +122,14 @@ export function App() {
       displayName: newProfile.displayName,
       avatarId: newProfile.avatarId,
       avatarBg: newProfile.avatarBg,
+      tiktokUsername: newProfile.tiktokUsername,
     });
+  };
+
+  // Wymuszone odświeżenie filmów z TikToka
+  const handleRefreshTikTok = () => {
+    const socket = socketService.getSocket();
+    socket.emit('refresh_tiktok');
   };
 
   // Start dobierania graczy (Kliknięcie "GRAJ")
@@ -199,6 +206,7 @@ export function App() {
               ...updates,
             });
           }}
+          onRefreshTikTok={handleRefreshTikTok}
           onLeave={handleLeaveGame}
         />
       )}

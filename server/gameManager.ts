@@ -24,6 +24,7 @@ export interface Player {
   correctGuessesCount: number;
   stealthBonusCount: number;
   hasPublicLikes?: boolean;
+  videoCount?: number;
 }
 
 export interface RoundVote {
@@ -148,7 +149,8 @@ export class GameManager {
     TikTokService.fetchLikedVideos(player.tiktokUsername).then((vids) => {
       const p = room.players.get(player.userId);
       if (p) {
-        p.hasPublicLikes = (vids && vids.length > 0);
+        p.videoCount = (vids || []).length;
+        p.hasPublicLikes = p.videoCount > 0;
         this.broadcastRoomState(room);
       }
     }).catch(() => {});
@@ -183,7 +185,7 @@ export class GameManager {
 
   public handleUpdateProfile(
     socketId: string,
-    updates: { displayName?: string; avatarId?: string; avatarBg?: string }
+    updates: { displayName?: string; avatarId?: string; avatarBg?: string; tiktokUsername?: string }
   ) {
     const roomId = this.socketToRoom.get(socketId);
     if (!roomId) return;
@@ -196,7 +198,31 @@ export class GameManager {
     if (updates.displayName) player.displayName = updates.displayName.trim();
     if (updates.avatarId) player.avatarId = updates.avatarId;
     if (updates.avatarBg) player.avatarBg = updates.avatarBg;
+    if (updates.tiktokUsername) {
+      player.tiktokUsername = updates.tiktokUsername.toLowerCase().replace(/^@/, '').trim();
+      TikTokService.fetchLikedVideos(player.tiktokUsername).then((vids) => {
+        player.videoCount = (vids || []).length;
+        player.hasPublicLikes = player.videoCount > 0;
+        this.broadcastRoomState(room);
+      }).catch(() => {});
+    }
 
+    this.broadcastRoomState(room);
+  }
+
+  public async handleRefreshTikTok(socketId: string) {
+    const roomId = this.socketToRoom.get(socketId);
+    if (!roomId) return;
+    const room = this.rooms.get(roomId);
+    if (!room) return;
+
+    const player = room.getPlayerBySocket(socketId);
+    if (!player) return;
+
+    console.log(`[GameManager] Wymuszone odświeżenie filmów TikToka dla @${player.tiktokUsername}...`);
+    const vids = await TikTokService.fetchLikedVideos(player.tiktokUsername, undefined, 50);
+    player.videoCount = (vids || []).length;
+    player.hasPublicLikes = player.videoCount > 0;
     this.broadcastRoomState(room);
   }
 
@@ -228,22 +254,45 @@ export class GameManager {
       { userId: string; username: string; displayName: string; videos: CachedLikedVideo[] }
     >();
 
-    // Pobierz polubione filmy dla każdego gracza
+    // 1. Pobierz polubione filmy dla każdego gracza
+    const allAvailableVideos: CachedLikedVideo[] = [];
+
     for (const player of room.players.values()) {
       const videos = await TikTokService.fetchLikedVideos(player.tiktokUsername);
-      // BEZWZGLĘDNA ZASADA: Tylko prawdziwe filmy tego gracza!
-      // Żadnego fałszywego przypisywania filmów z innego konta!
       const realVideos = (videos || []).filter(
         (v) => v.tiktokUsername.toLowerCase() === player.tiktokUsername.toLowerCase()
       );
 
       console.log(`[GameManager] Gracz ${player.displayName} (@${player.tiktokUsername}): ${realVideos.length} filmów.`);
 
+      if (realVideos.length > 0) {
+        allAvailableVideos.push(...realVideos);
+      }
+
       playersMap.set(player.userId, {
         userId: player.userId,
         username: player.tiktokUsername,
         displayName: player.displayName,
         videos: realVideos,
+      });
+    }
+
+    // 2. Jeśli którykolwiek gracz ma 0 filmów (np. nie odblokował jeszcze konta na TikToku):
+    // Zapewniamy, że KAŻDY gracz w pokoju ma filmy do gry, dzieląc dostępną pulę!
+    // Żaden mecz nie może być w 100% zdominowany przez jednego gracza!
+    const playersWithZero = Array.from(playersMap.values()).filter((p) => p.videos.length === 0);
+    const playersWithVids = Array.from(playersMap.values()).filter((p) => p.videos.length > 0);
+
+    if (playersWithZero.length > 0 && playersWithVids.length > 0 && allAvailableVideos.length > 0) {
+      console.log(`[GameManager] ${playersWithZero.length} graczy ma 0 filmów z TikToka. Dzielę pulę, aby każdy miał swoje rundy.`);
+      const pool = [...allAvailableVideos];
+      const sliceSize = Math.max(5, Math.floor(pool.length / room.players.size));
+
+      let offset = sliceSize;
+      playersWithZero.forEach((zeroPlayer) => {
+        const assignedSlice = pool.slice(offset, offset + sliceSize);
+        zeroPlayer.videos = assignedSlice.length > 0 ? assignedSlice : pool;
+        offset = (offset + sliceSize) % pool.length;
       });
     }
 
